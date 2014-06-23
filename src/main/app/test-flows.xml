@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:siebel="http://www.mulesoft.org/schema/mule/siebel" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:core="http://www.mulesoft.org/schema/mule/core" version="EE-3.5.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/siebel http://www.mulesoft.org/schema/mule/siebel/current/mule-siebel.xsd
+http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+    <sub-flow name="insertContactSF" doc:name="insertContactSF">
+        <sfdc:create type="Contact" config-ref="Salesforce" doc:name="Salesforce">
+            <sfdc:objects ref="#[payload]"/>
+        </sfdc:create>
+    </sub-flow>
+    <sub-flow name="deleteContactSiebel" doc:name="deleteContactSiebel">
+        <foreach doc:name="For Each">
+            <siebel:delete-business-component businessComponentId="#[payload]" businessObjectComponentType="Contact.Contact" config-ref="OracleSiebelBusinessObjects" doc:name="Oracle Siebel Business Objects"/>
+        </foreach>
+    </sub-flow>
+    <sub-flow name="deleteContactSF" doc:name="deleteContactSF">
+        <sfdc:delete config-ref="Salesforce" doc:name="Salesforce">
+            <sfdc:ids ref="#[payload]"/>
+        </sfdc:delete>
+    </sub-flow>
+    <sub-flow name="insertContactSiebel" doc:name="insertContactSiebel">
+        <siebel:create-business-component config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Contact.Contact" doc:name="Oracle Siebel Business Objects">
+            <siebel:business-component-fields ref="#[payload]"/>
+        </siebel:create-business-component>
+    </sub-flow>
+    <sub-flow name="selectContactSF" doc:name="selectContactSF">
+        <sfdc:query query="dsql:SELECT FirstName,Email FROM Contact where Email = '#[payload[&quot;Email Address&quot;]]'" config-ref="Salesforce" doc:name="Salesforce"/>
+    </sub-flow>
+</mule>
