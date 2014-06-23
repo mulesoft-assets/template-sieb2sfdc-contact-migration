@@ -17,7 +17,7 @@ http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/jso
 http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
 http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd">
     <data-mapper:config name="Contact_Contact_To_Contact" transformationGraphPath="contact.contact_to_contact.grf" doc:name="Contact_Contact_To_Contact"/>
-    <batch:job name="syncContactBatch">
+    <batch:job name="syncContactBatch" max-failed-records="1">
         <batch:threading-profile poolExhaustedAction="WAIT"/>
         <batch:input>
             <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Contact.Contact" doc:name="Oracle Siebel Business Objects">
@@ -31,35 +31,71 @@ http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schem
 					 <siebel:fields-to-retrieve>Fax Phone #</siebel:fields-to-retrieve>					 
 					 <siebel:fields-to-retrieve>Birth Date</siebel:fields-to-retrieve>
 					 <siebel:fields-to-retrieve>Assistant</siebel:fields-to-retrieve>
+					 <siebel:fields-to-retrieve>Account</siebel:fields-to-retrieve>
                 </siebel:fields-to-retrieve>
             </siebel:query-business-components>
         </batch:input>
         <batch:process-records>
-            <batch:step name="Batch_Step1">
-                <enricher source="#[payload]" target="#[recordVars['userInB']]" doc:name="Message Enricher">
-                    <sfdc:query-single config-ref="Salesforce" query="SELECT Id FROM Contact WHERE Email = '#[payload[&quot;Email Address&quot;]]' and Siebel_Id__c = '#[payload['Id']]'" doc:name="Salesforce"/>
+            <batch:step name="forEachContactInAGetContactInBStep">
+                <enricher source="#[payload]" target="#[recordVars['contactInB']]" doc:name="Message Enricher">
+                    <sfdc:query-single config-ref="Salesforce" query="SELECT Id FROM Contact WHERE Email = '#[payload[&quot;Email Address&quot;]]'" doc:name="Salesforce"/>
                 </enricher>
             </batch:step>
-            <batch:step name="Batch_Step">
-                <expression-component doc:name="Expression"><![CDATA[recordVars['Siebel_Id'] = payload['Id']]]></expression-component>
+            <batch:step name="findOrCreateAccountInBSetp" accept-expression="payload['Account'] != ''">
+                
+                <enricher doc:name="Message Enricher">
+                    <sfdc:query-single config-ref="Salesforce" query="SELECT Id,Name from Account where Name = '#payload[&quot;Account&quot;]'" doc:name="Salesforce"/>
+                    <enrich source="#[payload]" target="#[recordVars['accountInTargetInstance']]"/>
+                </enricher>
+                <choice doc:name="Choice">
+                    <when expression="#[recordVars['accountInTargetInstance'] is NullPayload]">
+                        <enricher source="#[payload]" target="#[recordVars['idOfAccountInTargetInstance']]" doc:name="store id of account in target instance">
+                            <processor-chain doc:name="Processor Chain">
+                                <expression-component doc:name="prepare account for creation"><![CDATA[String name = payload['Account'];
+payload['Account'] = new java.util.HashMap();
+payload['Account'].put('Name', name);
+payload['Account'].put('NumberOfEmployees', payload['Account']['NumberOfEmployees'] == null ? 0 :  Integer.parseInt(payload['Account']['NumberOfEmployees']));]]></expression-component>
+                                <set-payload value="#[ [payload['Account']]]" doc:name="set payload with account to be created"/>
+                                <sfdc:create config-ref="Salesforce" type="Account" doc:name="create account in B instance">
+                                    <sfdc:objects ref="#[payload]"/>
+                                </sfdc:create>
+
+                                <expression-transformer expression="#[payload[0].getId()]" doc:name="get the id of the account created"/>
+                            </processor-chain>
+                        </enricher>
+                    </when>
+                    <otherwise>
+                        <enricher source="#[payload]" target="#[recordVars['idOfAccountInTargetInstance']]" doc:name="store id of account in B">
+                            <expression-transformer expression="#[recordVars['accountInTargetInstance']['Id']]" doc:name="get the id of the account in target"/>
+                        </enricher>
+                    </otherwise>
+                </choice>
+
+            </batch:step>
+            <batch:step name="forEachContactThatShouldBeUpsertedInB">
 
             	<data-mapper:transform doc:name="Contact.Contact To Contact" config-ref="Contact_Contact_To_Contact"/>
-                <expression-component doc:name="Expression"><![CDATA[if (recordVars['userInB'] instanceof NullPayload){  
-	payload.remove('Id');	
-	payload.put('Siebel_Id__c', recordVars['Siebel_Id']);
-}
-else {
-	payload.put('Id', recordVars['userInB']['Id']);
-}]]></expression-component>
-
+                <expression-component doc:name="set contact's parent account id"><![CDATA[payload.put('AccountId', recordVars['idOfAccountInTargetInstance']);]]></expression-component>
+                <expression-component doc:name="Expression"><![CDATA[if (recordVars['contactInB'] instanceof NullPayload){  
+  	payload.remove('Id');  
+  }  
+  else {  
+  	payload.put('Id', recordVars['contactInB']['Id']);  
+  }]]></expression-component>
+  
+					
                 <batch:commit doc:name="Batch Commit" size="200">
-                    <logger message="before upsert: #[payload]" level="INFO" doc:name="Logger"/>
+
+
                     <sfdc:upsert config-ref="Salesforce" externalIdFieldName="Id" type="Contact" doc:name="Salesforce">
                         <sfdc:objects ref="#[payload]"/>
                     </sfdc:upsert>
+                    <logger message="aft: #[payload]" level="INFO" doc:name="Logger"/>
 
                 </batch:commit>
+
             </batch:step>
+
         </batch:process-records>
         <batch:on-complete>
             <scatter-gather doc:name="Scatter-Gather">

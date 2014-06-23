@@ -46,33 +46,33 @@ public class BusinessLogicIT extends FunctionalTestCase {
 	private static final String MAPPINGS_FOLDER_PATH = "./mappings";
 	private static final String TEST_FLOWS_FOLDER_PATH = "./src/test/resources/flows/";
 	private static final String MULE_DEPLOY_PROPERTIES_PATH = "./src/main/app/mule-deploy.properties";
-
-	protected static final int TIMEOUT_SEC = 120;
+	private static final String KEY_ACCOUNT = "Account";
+	protected static final int TIMEOUT_SEC = 60;
 	protected static final String TEMPLATE_NAME = "contact-migration";
-
+	private String accountName = TEMPLATE_NAME + "-account";
+	
 	protected SubflowInterceptingChainLifecycleWrapper retrieveContactFromSFFlow;
-	private List<Map<String, Object>> createdAccountsInA = new ArrayList<Map<String, Object>>(),
-			createdAccountsInB = new ArrayList<Map<String, Object>>();
+	private List<Map<String, Object>> createdContactsInA = new ArrayList<Map<String, Object>>(),
+			createdContactsInB = new ArrayList<Map<String, Object>>();
 	private BatchTestHelper helper;
-
+	private Map<String, Object> account = new HashMap<String, Object>(); 
+	
 	@Before
 	public void setUp() throws Exception {
 		helper = new BatchTestHelper(muleContext);
-	
 		// Flow to retrieve accounts from target system after sync in g
 		retrieveContactFromSFFlow = getSubFlow("selectContactSF");
 		retrieveContactFromSFFlow.initialise();
-	
 		createTestDataInSandBox();
 	}
 
 	@After
 	public void tearDown() throws Exception {		
-		deleteTestAccountsFromSandBoxA();		
-		deleteTestAccountsFromSandBoxB();
+		deleteTestContactsFromSandBoxA();		
+		deleteTestContactsFromSandBoxB();
 	}
 
-	@Test(timeout = TIMEOUT_SEC * 1000)
+	@Test
 	public void testMainFlow() throws Exception {
 		runFlow("mainFlow");
 		
@@ -80,11 +80,19 @@ public class BusinessLogicIT extends FunctionalTestCase {
 		helper.awaitJobTermination(TIMEOUT_SEC * 1000, 500);
 		helper.assertJobWasSuccessful();
 	
-		Map<String, Object> payload0 = invokeRetrieveFlow(retrieveContactFromSFFlow, createdAccountsInA.get(0));
-		Assert.assertNotNull("The account 0 should have been sync but is null", payload0);
-		Assert.assertEquals("The account 0 should have been sync (First Name)", createdAccountsInA.get(0).get(KEY_FIRST_NAME), payload0.get(KEY_FIRST_NAME_SF));
-		Assert.assertEquals("The account 0 should have been sync (Email)", createdAccountsInA.get(0).get(KEY_EMAIL).toString().toLowerCase(), payload0.get(KEY_EMAIL_SF));
-
+		Map<String, Object> payload0 = invokeRetrieveFlow(retrieveContactFromSFFlow, createdContactsInA.get(0));
+		Assert.assertNotNull("The contact 0 should have been sync but is null", payload0);
+		Assert.assertEquals("The contact 0 should have been sync (First Name)", createdContactsInA.get(0).get(KEY_FIRST_NAME), payload0.get(KEY_FIRST_NAME_SF));
+		Assert.assertEquals("The contact 0 should have been sync (Email)", createdContactsInA.get(0).get(KEY_EMAIL).toString().toLowerCase(), payload0.get(KEY_EMAIL_SF));
+	
+		// test if an account was created along with the contact
+		MuleEvent event = getSubFlow("selectAccountSF").process(getTestEvent(createdContactsInA.get(0), MessageExchangePattern.REQUEST_RESPONSE));
+		Assert.assertNotNull("The account for contact 0 should have been sync but is null", event.getMessage().getPayload());
+		
+		Map<String, Object>  payload1 = invokeRetrieveFlow(retrieveContactFromSFFlow, createdContactsInA.get(1));
+		Assert.assertNotNull("The contact 1 should have been sync but is null", payload1);
+		Assert.assertEquals("The contact 1 should have been sync (First Name)", createdContactsInA.get(1).get(KEY_FIRST_NAME), payload1.get(KEY_FIRST_NAME_SF));		
+		Assert.assertEquals("The contact 1 should have been sync (Email)", createdContactsInA.get(1).get(KEY_EMAIL).toString().toLowerCase(), payload1.get(KEY_EMAIL_SF));				
 	}
 
 	@Override
@@ -105,48 +113,49 @@ public class BusinessLogicIT extends FunctionalTestCase {
 	private void createTestDataInSandBox() throws MuleException, Exception {
 		// Create object in target system to be updated
 		
+		account.put("Name", accountName);
 		String uniqueSuffix = "_" + TEMPLATE_NAME;
 		
-		Map<String, Object> account_3_B = new HashMap<String, Object>();
-		account_3_B.put(KEY_FIRST_NAME_SF, "Name_3_B" + uniqueSuffix);
-		account_3_B.put(KEY_LAST_NAME_SF, "Name_3_B" + uniqueSuffix);		
-		account_3_B.put(KEY_EMAIL_SF, "Name_3_B" + uniqueSuffix + "@gmail.com");		
-		createdAccountsInB.add(account_3_B);
+		Map<String, Object> contact_3_B = new HashMap<String, Object>();
+		contact_3_B.put(KEY_FIRST_NAME_SF, "Name_3_B" + uniqueSuffix);
+		contact_3_B.put(KEY_LAST_NAME_SF, "Name_3_B" + uniqueSuffix);		
+		contact_3_B.put(KEY_EMAIL_SF, "Name_3_B" + uniqueSuffix + "@gmail.com");		
+		createdContactsInB.add(contact_3_B);
 	
 		SubflowInterceptingChainLifecycleWrapper createAccountInBFlow = getSubFlow("insertContactSF");
 		createAccountInBFlow.initialise();
-		MuleEvent event = createAccountInBFlow.process(getTestEvent(createdAccountsInB, MessageExchangePattern.REQUEST_RESPONSE));
+		MuleEvent event = createAccountInBFlow.process(getTestEvent(createdContactsInB, MessageExchangePattern.REQUEST_RESPONSE));
+		@SuppressWarnings(value = { "unchecked" })
 		List<EnrichedSaveResult> list = (List<EnrichedSaveResult>) event.getMessage().getPayload();
-		createdAccountsInB.get(0).put(KEY_ID, list.get(0).getId());
+		createdContactsInB.get(0).put(KEY_ID, list.get(0).getId());
 		
 		Thread.sleep(1001); // this is here to prevent equal LastModifiedDate
 		
 		// Create accounts in source system to be or not to be synced
 	
-		Map<String, Object> account_0_A = new HashMap<String, Object>();
-		account_0_A.put(KEY_FIRST_NAME, "Name_0_A");
-		account_0_A.put(KEY_LAST_NAME, "Name_0_A");
-		account_0_A.put(KEY_EMAIL, account_0_A.get(KEY_FIRST_NAME) + "@gmail.com");
-		createdAccountsInA.add(account_0_A);
+		Map<String, Object> contact_0_A = new HashMap<String, Object>();
+		contact_0_A.put(KEY_FIRST_NAME, "Name_0_A"+ uniqueSuffix);
+		contact_0_A.put(KEY_LAST_NAME, "Name_0_A"+ uniqueSuffix);
+		contact_0_A.put(KEY_EMAIL, contact_0_A.get(KEY_FIRST_NAME) + "@gmail.com");
+		contact_0_A.put(KEY_ACCOUNT, account.get("Name"));
+		createdContactsInA.add(contact_0_A);
 				
 
-		Map<String, Object> account_1_A = new HashMap<String, Object>();
-		account_1_A.put(KEY_FIRST_NAME,  "Name_updated");
-		account_1_A.put(KEY_LAST_NAME, "Name_1_A");
-		account_1_A.put(KEY_EMAIL, account_3_B.get(KEY_EMAIL_SF));
-		createdAccountsInA.add(account_1_A);
+		Map<String, Object> contact_1_A = new HashMap<String, Object>();
+		contact_1_A.put(KEY_FIRST_NAME,  "Name_updated");
+		contact_1_A.put(KEY_LAST_NAME, "Name_1_A");
+		contact_1_A.put(KEY_EMAIL, contact_3_B.get(KEY_EMAIL_SF));
+		createdContactsInA.add(contact_1_A);
 		
-		SubflowInterceptingChainLifecycleWrapper createAccountInAFlow = getSubFlow("insertContactSiebel");
-		createAccountInAFlow.initialise();
-		for (int i = 0; i < createdAccountsInA.size(); i++){			
-			event = createAccountInAFlow.process(getTestEvent(createdAccountsInA.get(i), MessageExchangePattern.REQUEST_RESPONSE));			
+		SubflowInterceptingChainLifecycleWrapper createContactInAFlow = getSubFlow("insertContactSiebel");
+		createContactInAFlow.initialise();
+		for (int i = 0; i < createdContactsInA.size(); i++){			
+			event = createContactInAFlow.process(getTestEvent(createdContactsInA.get(i), MessageExchangePattern.REQUEST_RESPONSE));			
 			CreateResult cr = (CreateResult) event.getMessage().getPayload();
-		
 			// assign Siebel-generated IDs						
-			createdAccountsInA.get(i).put(KEY_ID, cr.getCreatedObjects().get(0));
+			createdContactsInA.get(i).put(KEY_ID, cr.getCreatedObjects().get(0));
 		}
-		createdAccountsInB.get(0).put("Siebel_Id__c", createdAccountsInA.get(0).get(KEY_ID));
-		System.out.println("Results after adding: " + createdAccountsInA.toString());
+		System.out.println("Results after adding: " + createdContactsInA.toString());
 	}
 
 	private String getTestFlows() {
@@ -177,31 +186,45 @@ public class BusinessLogicIT extends FunctionalTestCase {
 		return properties;
 	}
 
-	@SuppressWarnings("uncheck" +
-			"ed")
+	@SuppressWarnings("unchecked")
 	protected Map<String, Object> invokeRetrieveFlow(SubflowInterceptingChainLifecycleWrapper flow, Map<String, Object> payload) throws Exception {
 		MuleEvent event = flow.process(getTestEvent(payload, MessageExchangePattern.REQUEST_RESPONSE));
 		Object resultPayload = event.getMessage().getPayload();
 		return resultPayload instanceof NullPayload ? null : ((ConsumerIterator<Map<String, Object>>) resultPayload).next();
 	}
 	
-	private void deleteTestAccountsFromSandBoxA() throws InitialisationException, MuleException, Exception {
-		SubflowInterceptingChainLifecycleWrapper deleteAccountFromAFlow = getSubFlow("deleteContactSiebel");
-		deleteAccountFromAFlow.initialise();
-		deleteTestEntityFromSandBox(deleteAccountFromAFlow, createdAccountsInA);
+	private void deleteTestContactsFromSandBoxA() throws InitialisationException, MuleException, Exception {
+		SubflowInterceptingChainLifecycleWrapper flow = getSubFlow("deleteContactSiebel");
+		flow.initialise();
+		deleteTestEntityFromSandBox(flow, createdContactsInA);
+		
+		flow = getSubFlow("selectAccountSiebel");
+		flow.initialise();
+		List<Map<String, Object>> resp = (List<Map<String, Object>>)flow.process(getTestEvent(account, MessageExchangePattern.REQUEST_RESPONSE)).getMessage().getPayload();
+		
+		List<String> idList = new ArrayList<String>();
+		flow = getSubFlow("deleteAccountSiebel");
+		flow.initialise();
+		idList.add(resp.get(0).get("Id").toString());
+		flow.process(getTestEvent(idList, MessageExchangePattern.REQUEST_RESPONSE));	
 	}
 
-	private void deleteTestAccountsFromSandBoxB() throws InitialisationException, MuleException, Exception {
-		SubflowInterceptingChainLifecycleWrapper deleteAccountFromBFlow = getSubFlow("deleteContactSF");
-		deleteAccountFromBFlow.initialise();
-		deleteTestEntityFromSandBox(deleteAccountFromBFlow, createdAccountsInB);
+	private void deleteTestContactsFromSandBoxB() throws InitialisationException, MuleException, Exception {
+		SubflowInterceptingChainLifecycleWrapper flow = getSubFlow("selectAccountSF");
+		flow.initialise();
+		MuleEvent event = flow.process(getTestEvent(accountName, MessageExchangePattern.REQUEST_RESPONSE));	
+		List<String> idList = new ArrayList<String>();
+		idList.add(((HashMap<String, String>)event.getMessage().getPayload()).get("Id"));
+		
+		flow = getSubFlow("deleteAccountSF");
+		flow.initialise();
+		flow.process(getTestEvent(idList, MessageExchangePattern.REQUEST_RESPONSE));	
 	}
 	
 	private void deleteTestEntityFromSandBox(SubflowInterceptingChainLifecycleWrapper deleteFlow, List<Map<String, Object>> entitities) throws MuleException, Exception {
 		List<String> idList = new ArrayList<String>();
 		for (Map<String, Object> c : entitities) {
 			idList.add(c.get(KEY_ID).toString());
-			System.out.println("id: " + c.get(KEY_ID).toString());
 		}
 		deleteFlow.process(getTestEvent(idList, MessageExchangePattern.REQUEST_RESPONSE));
 	}

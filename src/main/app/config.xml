@@ -17,10 +17,11 @@ http://www.mulesoft.org/schema/mule/smtp http://www.mulesoft.org/schema/mule/smt
 
     <context:property-placeholder location="common.properties, mule.${mule.env}.properties"/>
 
-    <siebel:config name="OracleSiebelBusinessObjects" user="${sieb.user}" password="${sieb.password}" server="${sieb.server}" port="${sieb.port}" serverName="${sieb.serverName}" objectManager="${sieb.objectManager}" doc:name="Oracle Siebel Business Objects"  dataSenseFilterQueryBusObjects="[Name] = 'Contact'">
+    <siebel:config name="OracleSiebelBusinessObjects" user="${sieb.user}" password="${sieb.password}" server="${sieb.server}" port="${sieb.port}" serverName="${sieb.serverName}" objectManager="${sieb.objectManager}" doc:name="Oracle Siebel Business Objects"  dataSenseFilterQueryBusObjects="[Name] = 'Contact' or [Name] = 'Account'">
         <siebel:connection-pooling-profile initialisationPolicy="INITIALISE_ONE" exhaustedAction="WHEN_EXHAUSTED_GROW"/>
     </siebel:config>
     <smtp:gmail-connector name="Gmail" validateConnections="true" doc:name="Gmail"/>
     <sfdc:config name="Salesforce" username="${sfdc.username}" password="${sfdc.password}" securityToken="${sfdc.securityToken}" doc:name="Salesforce"/>
+
 
 </mule>
