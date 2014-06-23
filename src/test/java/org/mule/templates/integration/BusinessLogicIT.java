@@ -47,7 +47,7 @@ public class BusinessLogicIT extends FunctionalTestCase {
 	private static final String TEST_FLOWS_FOLDER_PATH = "./src/test/resources/flows/";
 	private static final String MULE_DEPLOY_PROPERTIES_PATH = "./src/main/app/mule-deploy.properties";
 	private static final String KEY_ACCOUNT = "Account";
-	protected static final int TIMEOUT_SEC = 60;
+	protected static final int TIMEOUT_SEC = 120;
 	protected static final String TEMPLATE_NAME = "contact-migration";
 	private String accountName = TEMPLATE_NAME + "-account";
 	
