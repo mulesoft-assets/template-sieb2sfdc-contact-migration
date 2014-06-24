@@ -37,14 +37,14 @@ http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schem
         </batch:input>
         <batch:process-records>
             <batch:step name="forEachContactInAGetContactInBStep">
-                <enricher source="#[payload]" target="#[recordVars['contactInB']]" doc:name="Message Enricher">
-                    <sfdc:query-single config-ref="Salesforce" query="SELECT Id FROM Contact WHERE Email = '#[payload[&quot;Email Address&quot;]]'" doc:name="Salesforce"/>
+                <enricher source="#[payload]" target="#[recordVars['contactInB']]" doc:name="store Contact in 'contactInB'">
+                    <sfdc:query-single config-ref="Salesforce" query="SELECT Id FROM Contact WHERE Email = '#[payload[&quot;Email Address&quot;]]'" doc:name="Query Salesforce for Contact"/>
                 </enricher>
             </batch:step>
             <batch:step name="findOrCreateAccountInBSetp" accept-expression="payload['Account'] != ''">
                 
-                <enricher doc:name="Message Enricher">
-                    <sfdc:query-single config-ref="Salesforce" query="SELECT Id,Name from Account where Name = '#payload[&quot;Account&quot;]'" doc:name="Salesforce"/>
+                <enricher doc:name="store Account in accountInTargetInstance">
+                    <sfdc:query-single config-ref="Salesforce" query="SELECT Id,Name from Account where Name = '#payload[&quot;Account&quot;]'" doc:name="Query Salesforce for Account"/>
                     <enrich source="#[payload]" target="#[recordVars['accountInTargetInstance']]"/>
                 </enricher>
                 <choice doc:name="Choice">
@@ -72,25 +72,28 @@ payload['Account'].put('NumberOfEmployees', payload['Account']['NumberOfEmployee
                 </choice>
 
             </batch:step>
-            <batch:step name="forEachContactThatShouldBeUpsertedInB">
+            <batch:step name="forEachContactThatShouldBeUpsertedInB" accept-policy="ALL">
 
             	<data-mapper:transform doc:name="Contact.Contact To Contact" config-ref="Contact_Contact_To_Contact"/>
-                <expression-component doc:name="set contact's parent account id"><![CDATA[payload.put('AccountId', recordVars['idOfAccountInTargetInstance']);]]></expression-component>
-                <expression-component doc:name="Expression"><![CDATA[if (recordVars['contactInB'] instanceof NullPayload){  
+                <expression-component doc:name="set contact's parent account id"><![CDATA[payload.put('AccountId', recordVars['idOfAccountInTargetInstance']);
+
+if (recordVars['contactInB'] instanceof NullPayload){  
   	payload.remove('Id');  
   }  
   else {  
   	payload.put('Id', recordVars['contactInB']['Id']);  
   }]]></expression-component>
+
+
   
 					
                 <batch:commit doc:name="Batch Commit" size="200">
 
 
-                    <sfdc:upsert config-ref="Salesforce" externalIdFieldName="Id" type="Contact" doc:name="Salesforce">
+                    <sfdc:upsert config-ref="Salesforce" externalIdFieldName="Id" type="Contact" doc:name="Upsert Contact in Salesforce">
                         <sfdc:objects ref="#[payload]"/>
                     </sfdc:upsert>
-                    <logger message="aft: #[payload]" level="INFO" doc:name="Logger"/>
+                    <logger message="aft: #[payload]" level="INFO" doc:name="log result"/>
 
                 </batch:commit>
 

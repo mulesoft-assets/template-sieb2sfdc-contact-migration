@@ -26,6 +26,7 @@ import org.mule.processor.chain.SubflowInterceptingChainLifecycleWrapper;
 import org.mule.streaming.ConsumerIterator;
 import org.mule.tck.junit4.FunctionalTestCase;
 import org.mule.transport.NullPayload;
+import org.mule.util.UUID;
 
 import com.mulesoft.module.batch.BatchTestHelper;
 
@@ -68,8 +69,8 @@ public class BusinessLogicIT extends FunctionalTestCase {
 
 	@After
 	public void tearDown() throws Exception {		
-		deleteTestContactsFromSandBoxA();		
-		deleteTestContactsFromSandBoxB();
+		//deleteTestContactsFromSandBoxA();		
+		//deleteTestContactsFromSandBoxB();
 	}
 
 	@Test
@@ -105,7 +106,6 @@ public class BusinessLogicIT extends FunctionalTestCase {
 					"Could not find mule-deploy.properties file on classpath. " +
 					"Please add any of those files or override the getConfigResources() method to provide the resources by your own.");
 		}
-
 		return props.getProperty("config.resources") + getTestFlows();
 	}
 
@@ -114,7 +114,7 @@ public class BusinessLogicIT extends FunctionalTestCase {
 		// Create object in target system to be updated
 		
 		account.put("Name", accountName);
-		String uniqueSuffix = "_" + TEMPLATE_NAME;
+		String uniqueSuffix = "_" + TEMPLATE_NAME + "_" + System.currentTimeMillis();
 		
 		Map<String, Object> contact_3_B = new HashMap<String, Object>();
 		contact_3_B.put(KEY_FIRST_NAME_SF, "Name_3_B" + uniqueSuffix);
@@ -137,7 +137,7 @@ public class BusinessLogicIT extends FunctionalTestCase {
 		contact_0_A.put(KEY_FIRST_NAME, "Name_0_A"+ uniqueSuffix);
 		contact_0_A.put(KEY_LAST_NAME, "Name_0_A"+ uniqueSuffix);
 		contact_0_A.put(KEY_EMAIL, contact_0_A.get(KEY_FIRST_NAME) + "@gmail.com");
-		contact_0_A.put(KEY_ACCOUNT, account.get("Name"));
+		contact_0_A.put(KEY_ACCOUNT, account.get("Name"+UUID.getUUID()));
 		createdContactsInA.add(contact_0_A);
 				
 
@@ -205,8 +205,8 @@ public class BusinessLogicIT extends FunctionalTestCase {
 		List<String> idList = new ArrayList<String>();
 		flow = getSubFlow("deleteAccountSiebel");
 		flow.initialise();
-		idList.add(resp.get(0).get("Id").toString());
-		flow.process(getTestEvent(idList, MessageExchangePattern.REQUEST_RESPONSE));	
+		//idList.add(resp.get(0).get("Id").toString());
+		//flow.process(getTestEvent(idList, MessageExchangePattern.REQUEST_RESPONSE));	
 	}
 
 	private void deleteTestContactsFromSandBoxB() throws InitialisationException, MuleException, Exception {
