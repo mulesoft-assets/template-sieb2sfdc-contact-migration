@@ -114,6 +114,12 @@ In order to use this Mule Anypoint Template you need to configure properties (Cr
 + sfdc.securityToken `ces56arl7apQs56XTddf34X`
 + sfdc.url `https://login.salesforce.com/services/Soap/u/26.0`
 
+#### SMPT Services configuration
++ smtp.host `smtp.gmail.com`
++ smtp.port `587`
++ smtp.user `exampleuser@gmail.com`
++ smtp.password `ExamplePassword456`
+
 #### E-Mail Details
 + mail.from `batch.migratecontacts.migration%40mulesoft.com`
 + mail.to `your.username@youremaildomain.com`
