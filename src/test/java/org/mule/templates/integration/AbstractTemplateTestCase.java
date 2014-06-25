@@ -1,3 +1,9 @@
+/**
+ * Mule Anypoint Template
+ * Copyright (c) MuleSoft, Inc.
+ * All rights reserved.  http://www.mulesoft.com
+ */
+
 package org.mule.templates.integration;
 
 import java.io.File;
@@ -15,7 +21,7 @@ import org.mule.tck.junit4.rule.DynamicPort;
  * 
  * @author damiansima
  */
-public class AbstractTemplateTestCase extends FunctionalTestCase {
+public abstract class AbstractTemplateTestCase extends FunctionalTestCase {
 	private static final String MAPPINGS_FOLDER_PATH = "./mappings";
 	private static final String TEST_FLOWS_FOLDER_PATH = "./src/test/resources/flows/";
 	private static final String MULE_DEPLOY_PROPERTIES_PATH = "./src/main/app/mule-deploy.properties";
