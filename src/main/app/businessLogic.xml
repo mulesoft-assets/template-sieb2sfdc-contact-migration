@@ -20,7 +20,7 @@ http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schem
     <batch:job name="syncContactBatch" max-failed-records="1">
         <batch:threading-profile poolExhaustedAction="WAIT"/>
         <batch:input>
-            <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Contact.Contact" doc:name="Oracle Siebel Business Objects">
+            <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Contact.Contact" doc:name="Oracle Siebel Business Objects" searchExpression="[Email Address] &lt;&gt; ''">
                 <siebel:fields-to-retrieve>
                 	<siebel:fields-to-retrieve>Id</siebel:fields-to-retrieve>
 					 <siebel:fields-to-retrieve>Email Address</siebel:fields-to-retrieve>
