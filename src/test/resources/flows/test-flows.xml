@@ -15,7 +15,6 @@ http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/cor
         <siebel:create-business-component config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Contact.Contact" doc:name="Oracle Siebel Business Objects">
             <siebel:business-component-fields ref="#[payload]"/>
         </siebel:create-business-component>
-        <logger message="yyyyyyyyyyyy #[payload]" level="INFO" doc:name="Logger"/>
     </sub-flow>    
     <sub-flow name="deleteAccountSiebel" doc:name="deleteAccountSiebel">
         <foreach doc:name="For Each">

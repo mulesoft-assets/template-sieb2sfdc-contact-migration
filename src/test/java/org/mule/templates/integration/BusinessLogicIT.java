@@ -6,10 +6,14 @@
 
 package org.mule.templates.integration;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 
 import junit.framework.Assert;
 
@@ -39,7 +43,6 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	private static final String KEY_EMAIL = "Email Address";
 	private static final String KEY_ACCOUNT = "Account";
 	
-	private static final String ANYPOINT_TEMPLATE_NAME = "sfdc2sieb-contact-migration";
 	private static final String INBOUND_FLOW_NAME = "mainFlow";
 	private static final int TIMEOUT_MILLIS = 120;
 
@@ -59,6 +62,13 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 
 	@BeforeClass
 	public static void beforeTestClass() {
+		DateFormat formatter = new SimpleDateFormat("M/d/y H:m:s");
+		Calendar calendar = Calendar.getInstance();
+		formatter.setCalendar(calendar);
+		formatter.setTimeZone(TimeZone.getTimeZone("US/Pacific"));
+		String siebelTime = formatter.format(calendar.getTime());
+		System.setProperty("migration.startDate", siebelTime);
+		System.out.println("migration date: " + System.getProperty("migration.startDate"));
 	}
 
 	@Before
@@ -136,7 +146,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 			MuleEvent event = createContactInSiebel.process(getTestEvent(contactInSiebel, MessageExchangePattern.REQUEST_RESPONSE));
 			CreateResult cr = (CreateResult) event.getMessage().getPayload();
 			contactInSiebel.put(KEY_ID, cr.getCreatedObjects().get(0));
-			
+			logger.info("created siebel contact: " + contactInSiebel);
 		} catch(Exception e){
 			e.printStackTrace();
 		}

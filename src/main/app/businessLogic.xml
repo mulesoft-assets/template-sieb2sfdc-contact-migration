@@ -20,7 +20,7 @@ http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schem
     <batch:job name="syncContactBatch" max-failed-records="1">
         <batch:threading-profile poolExhaustedAction="WAIT"/>
         <batch:input>
-            <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Contact.Contact" doc:name="Oracle Siebel Business Objects" searchExpression="[Email Address] &lt;&gt; ''">
+            <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Contact.Contact" doc:name="Oracle Siebel Business Objects" searchExpression="[Last Update - SDQ] &gt;= '${migration.startDate}'">
                 <siebel:fields-to-retrieve>
                 	<siebel:fields-to-retrieve>Id</siebel:fields-to-retrieve>
 					 <siebel:fields-to-retrieve>Email Address</siebel:fields-to-retrieve>
@@ -92,7 +92,7 @@ if (recordVars['contactInB'] instanceof NullPayload){
                     <sfdc:upsert config-ref="Salesforce" externalIdFieldName="Id" type="Contact" doc:name="Upsert Contact in Salesforce">
                         <sfdc:objects ref="#[payload]"/>
                     </sfdc:upsert>
-                    <logger message="aft: #[payload]" level="INFO" doc:name="log result"/>
+                    <logger message="After Upsert: #[payload]" level="INFO" doc:name="log result"/>
 
                 </batch:commit>
 

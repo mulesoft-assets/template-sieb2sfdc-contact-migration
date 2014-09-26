@@ -47,6 +47,7 @@ After this, to trigger the use case you just need to hit the local http endpoint
 		<section id="application_configuration">
 		<![CDATA[
 + http.port `9090` 
++ migration.startDate `9/25/14 23:0:0`
 
 #### Oracle Siebel Business Objects Connector configuration
 + sieb.user `SADMIN`
