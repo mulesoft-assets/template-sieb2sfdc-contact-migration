@@ -28,11 +28,11 @@ Please review the terms of the license before downloading and using this templat
 # Use Case <a name="usecase"/>
 I want to synchronize contacts from Siebel to Salesforce.
 
-This Template should serve as a foundation for the process of migrating contacts from Siebel to Salesforce, being able to specify filtering criteria and desired behavior when an contact already exists in the Salesforce. 
+This Template should serve as a foundation for the process of migrating contacts from Siebel to Salesforce, being able to specify filtering criteria and desired behavior when a contact already exists in the Salesforce. 
 
-As implemented, this Template leverage the [Batch Module](http://www.mulesoft.org/documentation/display/current/Batch+Processing).
+As implemented, this Template leverages the [Batch Module](http://www.mulesoft.org/documentation/display/current/Batch+Processing).
 The batch job is divided in Input, Process and On Complete stages.
-During the Input stage the Template will go to the Siebel and query all the existing Contacts that match the filter criteria.
+During the Input stage the Template will go to Siebel and query all the existing Contacts that match the filter criteria.
 During the Process stage, each Siebel Contact will be filtered depending on, if it has an existing matching Contact in the Salesforce and if the last updated date of the later is greater than the one of Siebel.
 The last step of the Process stage will group the contacts and create them in Salesforce.
 Finally during the On Complete stage the Template will both output statistics data into the console and send a notification email with the results of the batch execution.
