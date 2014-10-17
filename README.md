@@ -66,7 +66,7 @@ In order to have this template working as expected, you should be aware of your 
 
 ### As destination of data
 
-There are no particular considerations for this Anypoint Template regarding Siebel as data destination.
+There are no particular considerations for this Anypoint Template regarding Salesforce as data destination.
 ## Siebel Considerations <a name="siebelconsiderations"/>
 
 There may be a few things that you need to know regarding Siebel, in order for this template to work.
@@ -79,6 +79,7 @@ It will be up to the user of this template to provide such information. To find 
 ### As source of data
 
 There are no particular considerations for this Anypoint Template regarding Siebel as data origin.
+
 
 
 
