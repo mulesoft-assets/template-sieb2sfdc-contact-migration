@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>org.mule.templates</groupId>
 		<artifactId>templates-tooling-parent-pom</artifactId>
-		<version>1.0.6</version>
+		<version>1.0.12</version>
 	</parent>
 
 	<modelVersion>4.0.0</modelVersion>
@@ -14,7 +14,7 @@
     <name>template-sieb2sfdc-contact-migration Anypoint Template Project</name>
 
 	<properties>
-		<siebel.version>2.0.0</siebel.version>
+		<siebel.version>2.0.1</siebel.version>
 	</properties>
 
 	<scm>
