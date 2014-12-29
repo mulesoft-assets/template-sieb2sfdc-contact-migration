@@ -10,7 +10,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>template-sieb2sfdc-contact-migration</artifactId>
 	<packaging>mule</packaging>
-	<version>1.0.1-SNAPSHOT</version>
+	<version>1.0.1</version>
     <name>template-sieb2sfdc-contact-migration Anypoint Template Project</name>
 
 	<properties>
@@ -21,7 +21,7 @@
 		<connection>scm:git:https://github.com/mulesoft/template-sieb2sfdc-contact-migration.git</connection>
 		<developerConnection>scm:git:https://github.com/mulesoft/template-sieb2sfdc-contact-migration.git</developerConnection>
 		<url>http://github.com/mulesoft/template-sieb2sfdc-contact-migration</url>
-	  <tag>HEAD</tag>
+	  <tag>v1.0.1</tag>
   </scm>
 
 	<build>
