@@ -44,7 +44,7 @@ http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schem
             <batch:step name="findOrCreateAccountInBSetp" accept-expression="payload['Account'] != ''">
                 
                 <enricher doc:name="store Account in accountInTargetInstance">
-                    <sfdc:query-single config-ref="Salesforce" query="SELECT Id,Name from Account where Name = '#payload[&quot;Account&quot;]'" doc:name="Query Salesforce for Account"/>
+                    <sfdc:query-single config-ref="Salesforce" query="SELECT Id,Name from Account where Name = '#[payload[&quot;Account&quot;]]'" doc:name="Query Salesforce for Account"/>
                     <enrich source="#[payload]" target="#[recordVars['accountInTargetInstance']]"/>
                 </enricher>
                 <choice doc:name="Choice">
