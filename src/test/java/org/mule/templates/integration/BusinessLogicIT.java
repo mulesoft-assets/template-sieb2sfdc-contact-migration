@@ -17,6 +17,8 @@ import java.util.TimeZone;
 
 import junit.framework.Assert;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -37,6 +39,9 @@ import com.mulesoft.module.batch.BatchTestHelper;
  * 
  */
 public class BusinessLogicIT extends AbstractTemplateTestCase {
+	
+	private static final Logger log = LogManager.getLogger(BusinessLogicIT.class);
+	
 	private static final String KEY_ID = "Id";
 	private static final String KEY_FIRST_NAME = "First Name";	
 	private static final String KEY_LAST_NAME = "Last Name";
@@ -68,7 +73,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 		formatter.setTimeZone(TimeZone.getTimeZone("US/Pacific"));
 		String siebelTime = formatter.format(calendar.getTime());
 		System.setProperty("migration.startDate", siebelTime);
-		System.out.println("migration date: " + System.getProperty("migration.startDate"));
+		log.info("migration date: " + System.getProperty("migration.startDate"));
 	}
 
 	@Before
