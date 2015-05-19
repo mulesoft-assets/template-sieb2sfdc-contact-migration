@@ -9,7 +9,7 @@ http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/cor
         <siebel:create-business-component config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Account.Account" doc:name="Oracle Siebel Business Objects">
             <siebel:business-component-fields ref="#[payload]"/>
         </siebel:create-business-component>
-        <logger message="xxxxxxxxxx #[payload]" level="INFO" doc:name="Logger"/>
+        <logger message="Siebel account created: #[payload]" level="INFO" doc:name="Logger"/>
     </sub-flow>
     <sub-flow name="createContactInSiebel" doc:name="createContactInSiebel">
         <siebel:create-business-component config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Contact.Contact" doc:name="Oracle Siebel Business Objects">
@@ -31,7 +31,7 @@ http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/cor
     <sub-flow name="deleteContactSiebel" doc:name="deleteContactSiebel">
         <foreach doc:name="For Each">
             <siebel:delete-business-component config-ref="OracleSiebelBusinessObjects" businessComponentId="#[payload]" businessObjectComponentType="Contact.Contact" doc:name="Oracle Siebel Business Objects"/>
-            <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+            <logger message="Siebel contact deleted: #[payload]" level="INFO" doc:name="Logger"/>
         </foreach>
     </sub-flow>
 
@@ -39,11 +39,11 @@ http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/cor
         <sfdc:delete config-ref="Salesforce" doc:name="Salesforce">
             <sfdc:ids ref="#[payload]"/>
         </sfdc:delete>
-        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+        <logger message="Salesforce object deleted: #[payload]" level="INFO" doc:name="Logger"/>
 
     </sub-flow>
     <sub-flow name="queryContactFromSalesforce" doc:name="queryContactFromSalesforce">
         <sfdc:query config-ref="Salesforce" query="dsql:SELECT Id, FirstName,Email, AccountId FROM Contact where Email = '#[payload[&quot;Email Address&quot;]]'" doc:name="Salesforce"/>
-        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+        <logger message="retrieved Salesforce contact: #[payload]" level="INFO" doc:name="Logger"/>
     </sub-flow>
 </mule>
