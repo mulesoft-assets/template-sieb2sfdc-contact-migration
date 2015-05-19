@@ -15,11 +15,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
-import junit.framework.Assert;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
