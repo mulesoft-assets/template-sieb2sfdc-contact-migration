@@ -140,16 +140,21 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 			Map<String, Object> contactInSiebel = new HashMap<String, Object>();
 			String name = "ContactMigration"+ uniqueSuffix;
 			String email = name + "@gmail.com";
+			String accountName = name;
 			
 			contactInSiebel.put(KEY_FIRST_NAME, name);
 			contactInSiebel.put(KEY_LAST_NAME, name);
 			contactInSiebel.put(KEY_EMAIL, email);
-			contactInSiebel.put(KEY_ACCOUNT, name);
+			contactInSiebel.put(KEY_ACCOUNT, accountName);
 			contactsInSiebel.add(contactInSiebel);
 			
-			MuleEvent event = createContactInSiebel.process(getTestEvent(contactInSiebel, MessageExchangePattern.REQUEST_RESPONSE));
+			MuleEvent event = createAccountInSiebel.process(getTestEvent(accountName, MessageExchangePattern.REQUEST_RESPONSE));
+			
+			event = createContactInSiebel.process(getTestEvent(contactInSiebel, MessageExchangePattern.REQUEST_RESPONSE));
 			CreateResult cr = (CreateResult) event.getMessage().getPayload();
 			contactInSiebel.put(KEY_ID, cr.getCreatedObjects().get(0));
+			// accountName is deleted from the contactInSiebel after inserting object to the Siebel
+			contactInSiebel.put(KEY_ACCOUNT, accountName);
 			logger.info("created siebel contact: " + contactInSiebel);
 		} catch(Exception e){
 			e.printStackTrace();

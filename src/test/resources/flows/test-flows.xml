@@ -7,7 +7,9 @@ http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/cor
 
     <sub-flow name="createAccountInSiebel" doc:name="createAccountInSiebel">
         <siebel:create-business-component config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Account.Account" doc:name="Oracle Siebel Business Objects">
-            <siebel:business-component-fields ref="#[payload]"/>
+            <siebel:business-component-fields >
+                <siebel:business-component-field key="Name">#[payload]</siebel:business-component-field>
+            </siebel:business-component-fields>
         </siebel:create-business-component>
         <logger message="Siebel account created: #[payload]" level="INFO" doc:name="Logger"/>
     </sub-flow>
