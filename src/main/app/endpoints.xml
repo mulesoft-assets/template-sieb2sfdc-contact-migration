@@ -20,11 +20,14 @@ Here you should:
 Here you should not:
 	* Run validations against external systems
 	* Choose flow of your application based on input parameters">
-        <http:inbound-endpoint exchange-pattern="request-response" host="localhost" port="${http.port}"  doc:name="start synchronization" path="migratecontacts"/>
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/migratecontacts" doc:name="start synchronization">
+            <http:response-builder statusCode="200">
+                <http:header headerName="Content-Type" value="text/html"/>
+            </http:response-builder>
+        </http:listener>
         
         <flow-ref name="mainFlow" doc:description="mainFlow"  doc:name="call mainFlow"/>
         <set-payload value="&lt;body style='font-family:Courier'&gt;&lt;h1&gt;Batch Process initiated&lt;/h1&gt;&lt;b&gt;ID:&lt;/b&gt;#[payload.getId()]&lt;br/&gt;&lt;b&gt;Records to Be Processed: &lt;/b&gt;#[payload.getRecordCount()]&lt;br/&gt; &lt;b&gt;Start execution on: &lt;/b&gt;#[new java.util.Date()]&lt;/body&gt;" doc:name="set to Batch status response"/>
-        <http:response-builder status="200" contentType="text/html" doc:name="build HTTP response message"/>
     
     </flow>
 </mule>
