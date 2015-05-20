@@ -34,7 +34,8 @@ As implemented, this Template leverages the [Batch Module](http://www.mulesoft.o
 The batch job is divided in Input, Process and On Complete stages.
 During the Input stage the Template will go to Siebel and query all the existing Contacts that match the filter criteria.
 During the Process stage, each Siebel Contact will be filtered depending on, if it has an existing matching Contact in the Salesforce and if the last updated date of the later is greater than the one of Siebel.
-The last step of the Process stage will group the contacts and create them in Salesforce.
+Account associated with Siebel Contact is migrated to Account associated with Contact in Salesforce. The matching is performed by querying a Salesforce instance for an entry with name same as the given Siebel Account name.
+The last step of the Process stage will group the contacts and create or update them in Salesforce.
 Finally during the On Complete stage the Template will both output statistics data into the console and send a notification email with the results of the batch execution.
 
 # Considerations <a name="considerations"/>
@@ -79,6 +80,10 @@ It will be up to the user of this template to provide such information. To find 
 ### As source of data
 
 In order to make the siebel connector work smoothly you have to provide the correct version of the siebel jars (Siebel.jar, SiebelJI_enu.jar) that works with your Siebel installation.
+
+
+
+
 
 
 
@@ -143,6 +148,7 @@ In order to use this Mule Anypoint Template you need to configure properties (Cr
 ### Application configuration
 + http.port `9090` 
 + migration.startDate `9/25/14 23:0:0`
++ page.size `100`
 
 #### Oracle Siebel Business Objects Connector configuration
 + sieb.user `SADMIN`
@@ -156,7 +162,7 @@ In order to use this Mule Anypoint Template you need to configure properties (Cr
 + sfdc.username `joan.baez@org`
 + sfdc.password `JoanBaez456`
 + sfdc.securityToken `ces56arl7apQs56XTddf34X`
-+ sfdc.url `https://login.salesforce.com/services/Soap/u/26.0`
++ sfdc.url `https://login.salesforce.com/services/Soap/u/32.0`
 
 #### SMPT Services configuration
 + smtp.host `smtp.gmail.com`
@@ -209,13 +215,14 @@ This flow has Exception Strategy that basically consists on invoking the *defaul
 
 ## endpoints.xml<a name="endpointsxml"/>
 This is the file where you will found the inbound and outbound sides of your integration app.
-This Anypoint Template has only an [HTTP Inbound Endpoint](http://www.mulesoft.org/documentation/display/current/HTTP+Endpoint+Reference) as the way to trigger the use case.
+This Template has only an [HTTP Listener Connector](http://www.mulesoft.org/documentation/display/current/HTTP+Listener+Connector) as the way to trigger the use case.
 
-**HTTP Inbound Endpoint** - Start Report Generation
+**HTTP Listener Connector** - Start Report Generation
+
 + `${http.port}` is set as a property to be defined either on a property file or in CloudHub environment variables.
 + The path configured by default is `migratecontacts` and you are free to change for the one you prefer.
 + The host name for all endpoints in your CloudHub configuration should be defined as `localhost`. CloudHub will then route requests from your application domain URL to the endpoint.
-+ The endpoint is configured as a *request-response* since as a result of calling it the response will be the total of Contacts migrated and filtered by the criteria specified.
++ The endpoint is a *request-response* since as a result of calling it the response will be the total of Accounts synced and filtered by the criteria specified.
 
 
 
