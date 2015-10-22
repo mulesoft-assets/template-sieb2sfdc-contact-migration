@@ -48,14 +48,14 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
             </batch:step>
             <batch:step name="findOrCreateAccountInSalesforceStep" accept-expression="payload.Account != ''">
                 
-                <enricher doc:name="Store Account in accountInTargetInstance" source="#[payload]" target="#[recordVars.accountInTargetInstance]">
+                <enricher doc:name="Store Account in accountInTargetInstance" source="#[payload == null ? null : payload.Id]" target="#[payload.AccountId]">
                     <sfdc:query-single config-ref="Salesforce" query="SELECT Id,Name from Account where Name = '#[payload.Account]'" doc:name="Query Salesforce for Account"/>
 
                 </enricher>
                 <choice doc:name="Does account need to be created?">
-                    <when expression="#[recordVars.accountInTargetInstance == null]">
+                    <when expression="#[payload.AccountId == null]">
                         <enricher source="#[payload[0].getId()]" target="#[payload.AccountId]" doc:name="Enrich payload with new Account Id">
-                            <sfdc:create config-ref="Salesforce" type="Account" doc:name="create account in Salesforce">
+                            <sfdc:create config-ref="Salesforce" type="Account" doc:name="Create account in Salesforce">
                                 <sfdc:objects>
                                     <sfdc:object>
                                         <sfdc:inner-object key="Name">#[payload.Account]</sfdc:inner-object>
@@ -66,15 +66,14 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
                         </enricher>
                     </when>
                     <otherwise>
-                        <enricher source="#[payload]" target="#[payload.AccountId]" doc:name="Enrich payload with existing Account Id">
-                            <expression-transformer expression="#[recordVars.accountInTargetInstance.Id]" doc:name="Get existing SFDC Account Id"/>
-                        </enricher>
+                        <logger message="Account already exists. Nothing to create." level="INFO" doc:name="Log that the account exists"/>
+
                     </otherwise>
                 </choice>
             </batch:step>
             
             <batch:step name="upsertContactInSalesforce" accept-policy="ALL">
-                <batch:commit doc:name="Batch Commit" size="200">
+                <batch:commit doc:name="Batch Commit" size="${page.size}">
                     <dw:transform-message doc:name="Contact.Contact to Contact">
                         <dw:set-payload><![CDATA[%dw 1.0
 %output application/java
@@ -96,7 +95,7 @@ payload map {
                     <sfdc:upsert config-ref="Salesforce" externalIdFieldName="Id" type="Contact" doc:name="Upsert Contact in Salesforce">
                         <sfdc:objects ref="#[payload]"/>
                     </sfdc:upsert>
-                    <logger message="After Upsert: #[payload]" level="INFO" doc:name="log result"/>
+                    <logger message="After Upsert: #[payload]" level="INFO" doc:name="Log result"/>
                 </batch:commit>
             </batch:step>
 

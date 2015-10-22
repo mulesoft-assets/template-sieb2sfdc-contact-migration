@@ -12,7 +12,8 @@ This Template should serve as a foundation for the process of migrating contacts
 As implemented, this Template leverages the [Batch Module](http://www.mulesoft.org/documentation/display/current/Batch+Processing).
 The batch job is divided in Input, Process and On Complete stages.
 During the Input stage the Template query Siebel for all the existing Contacts that match the filtering criteria.
-In Process stage, the template will group the contacts and create them in Salesforce.
+Account associated with Siebel Contact is migrated to Account associated with Contact in Salesforce. The matching is performed by querying a Salesforce instance for an entry with name same as the given Siebel Account name.
+In Process stage, the template will group the contacts and create/update them in Salesforce.
 Finally during the On Complete stage the Template will  output statistics data into the console and send a notification email with the results of the batch execution to configured list of email addresses.
 		</section>
 		<section id="considerations">
@@ -52,6 +53,7 @@ After this, to trigger the use case you just need to hit the local http endpoint
 		<![CDATA[
 + http.port `9090` 
 + migration.startDate `10/22/15 23:0:0`
++ page.size `200`
 
 #### Oracle Siebel Business Objects Connector configuration
 + sieb.user `SADMIN`
@@ -95,7 +97,7 @@ For instance if 10 records are fetched from origin instance, then 12 api calls w
 		<section id="default_endpoints_xml">
 		<![CDATA[
 This is the file where you will find the inbound and outbound sides of your integration app.
-This Anypoint Template has only an [HTTP Listener Connector](http://www.mulesoft.org/documentation/display/current/HTTP+Connector) as the way to trigger the use case.
+This Anypoint Template has only an [HTTP Listener Connector](http://www.mulesoft.org/documentation/display/current/HTTP+Listener+Connector) as the way to trigger the use case.
 
 ###  Inbound Flow
 **HTTP Listener Connector** - Start Report Generation
