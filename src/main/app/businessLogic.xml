@@ -1,13 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:core="http://www.mulesoft.org/schema/mule/core" xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns:smtp="http://www.mulesoft.org/schema/mule/smtp"
-	xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:siebel="http://www.mulesoft.org/schema/mule/siebel" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking"
-      xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-      xmlns:spring="http://www.springframework.org/schema/beans"
-      version="EE-3.6.2"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" 
+	xmlns:core="http://www.mulesoft.org/schema/mule/core" 
+	xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" 
+	xmlns:smtp="http://www.mulesoft.org/schema/mule/smtp"
+	xmlns:json="http://www.mulesoft.org/schema/mule/json" 
+	xmlns:batch="http://www.mulesoft.org/schema/mule/batch" 
+	xmlns:siebel="http://www.mulesoft.org/schema/mule/siebel" 
+	xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking"
+    xmlns="http://www.mulesoft.org/schema/mule/core"
+    xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+    xmlns:spring="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/smtp http://www.mulesoft.org/schema/mule/smtp/current/mule-smtp.xsd
 http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
@@ -15,9 +20,8 @@ http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/ba
 http://www.mulesoft.org/schema/mule/siebel http://www.mulesoft.org/schema/mule/siebel/current/mule-siebel.xsd
 http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
 http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
-http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd">
-    <data-mapper:config name="Contact_Contact_To_Contact" transformationGraphPath="contact.contact_to_contact.grf" doc:name="Contact_Contact_To_Contact"/>
-    <batch:job name="syncContactBatch" max-failed-records="1">
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
+    <batch:job name="syncContactsBatch" max-failed-records="1">
         <batch:threading-profile poolExhaustedAction="WAIT"/>
         <batch:input>
             <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Contact.Contact" doc:name="Oracle Siebel Business Objects" searchExpression="[Last Update - SDQ] &gt;= '${migration.startDate}'">
@@ -34,92 +38,89 @@ http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schem
 					 <siebel:fields-to-retrieve>Account</siebel:fields-to-retrieve>
                 </siebel:fields-to-retrieve>
             </siebel:query-business-components>
+
         </batch:input>
         <batch:process-records>
-            <batch:step name="forEachContactInAGetContactInBStep">
-                <enricher source="#[payload]" target="#[recordVars['contactInB']]" doc:name="store Contact in 'contactInB'">
+            <batch:step name="getContactInSalesforceStep">
+                <enricher source="#[payload == null ? null : payload.Id]" target="#[payload.Id]" doc:name="Enrich payload with Id of target instance">
                     <sfdc:query-single config-ref="Salesforce" query="SELECT Id FROM Contact WHERE Email = '#[payload[&quot;Email Address&quot;]]'" doc:name="Query Salesforce for Contact"/>
                 </enricher>
             </batch:step>
-            <batch:step name="findOrCreateAccountInBSetp" accept-expression="payload['Account'] != ''">
+            <batch:step name="findOrCreateAccountInSalesforceStep" accept-expression="payload.Account != ''">
                 
-                <enricher doc:name="store Account in accountInTargetInstance">
-                    <sfdc:query-single config-ref="Salesforce" query="SELECT Id,Name from Account where Name = '#[payload[&quot;Account&quot;]]'" doc:name="Query Salesforce for Account"/>
-                    <enrich source="#[payload]" target="#[recordVars['accountInTargetInstance']]"/>
-                </enricher>
-                <choice doc:name="Choice">
-                    <when expression="#[recordVars['accountInTargetInstance'] is NullPayload]">
-                        <enricher source="#[payload]" target="#[recordVars['idOfAccountInTargetInstance']]" doc:name="store id of account in target instance">
-                            <processor-chain doc:name="Processor Chain">
-                                <expression-component doc:name="prepare account for creation"><![CDATA[String name = payload['Account'];
-payload['Account'] = new java.util.HashMap();
-payload['Account'].put('Name', name);]]></expression-component>
-                                <set-payload value="#[ [payload['Account']]]" doc:name="set payload with account to be created"/>
-                                <sfdc:create config-ref="Salesforce" type="Account" doc:name="create account in B instance">
-                                    <sfdc:objects ref="#[payload]"/>
-                                </sfdc:create>
+                <enricher doc:name="Store Account in accountInTargetInstance" source="#[payload]" target="#[recordVars.accountInTargetInstance]">
+                    <sfdc:query-single config-ref="Salesforce" query="SELECT Id,Name from Account where Name = '#[payload.Account]'" doc:name="Query Salesforce for Account"/>
 
-                                <expression-transformer expression="#[payload[0].getId()]" doc:name="get the id of the account created"/>
-                            </processor-chain>
+                </enricher>
+                <choice doc:name="Does account need to be created?">
+                    <when expression="#[recordVars.accountInTargetInstance == null]">
+                        <enricher source="#[payload[0].getId()]" target="#[payload.AccountId]" doc:name="Enrich payload with new Account Id">
+                            <sfdc:create config-ref="Salesforce" type="Account" doc:name="create account in Salesforce">
+                                <sfdc:objects>
+                                    <sfdc:object>
+                                        <sfdc:inner-object key="Name">#[payload.Account]</sfdc:inner-object>
+                                    </sfdc:object>
+                                </sfdc:objects>
+                            </sfdc:create>
+
                         </enricher>
                     </when>
                     <otherwise>
-                        <enricher source="#[payload]" target="#[recordVars['idOfAccountInTargetInstance']]" doc:name="store id of account in B">
-                            <expression-transformer expression="#[recordVars['accountInTargetInstance']['Id']]" doc:name="get the id of the account in target"/>
+                        <enricher source="#[payload]" target="#[payload.AccountId]" doc:name="Enrich payload with existing Account Id">
+                            <expression-transformer expression="#[recordVars.accountInTargetInstance.Id]" doc:name="Get existing SFDC Account Id"/>
                         </enricher>
                     </otherwise>
                 </choice>
-
             </batch:step>
-            <batch:step name="forEachContactThatShouldBeUpsertedInB" accept-policy="ALL">
-
-            	<data-mapper:transform doc:name="Contact.Contact To Contact" config-ref="Contact_Contact_To_Contact"/>
-                <expression-component doc:name="set contact's parent account id"><![CDATA[payload.put('AccountId', recordVars['idOfAccountInTargetInstance']);
-
-if (recordVars['contactInB'] instanceof NullPayload){  
-  	payload.remove('Id');  
-  }  
-  else {  
-  	payload.put('Id', recordVars['contactInB']['Id']);  
-  }]]></expression-component>
-
-
-  
-					
+            
+            <batch:step name="upsertContactInSalesforce" accept-policy="ALL">
                 <batch:commit doc:name="Batch Commit" size="200">
-
-
+                    <dw:transform-message doc:name="Contact.Contact to Contact">
+                        <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload map {
+	(Id            : $.Id) when $.Id != null,
+	AccountId      : $.AccountId,
+	Department     : $.Department,
+	FirstName      : $."First Name",
+	LastName       : $."Last Name",
+	Email          : $."Email Address",
+	Phone          : $."Work Phone #",
+	HomePhone      : $."Home Phone #",
+	Fax            : $."Fax Phone #",
+	Birthdate      : $."Birth Date" as :date {format: "YYYY/MM/dd"}  unless ($."Birth Date" is :empty) otherwise null,
+	AssistantName  : $.Assistant
+}]]></dw:set-payload>
+                    </dw:transform-message>
                     <sfdc:upsert config-ref="Salesforce" externalIdFieldName="Id" type="Contact" doc:name="Upsert Contact in Salesforce">
                         <sfdc:objects ref="#[payload]"/>
                     </sfdc:upsert>
                     <logger message="After Upsert: #[payload]" level="INFO" doc:name="log result"/>
-
                 </batch:commit>
-
             </batch:step>
 
         </batch:process-records>
         <batch:on-complete>
-            <scatter-gather doc:name="Scatter-Gather">
-                 <processor-chain> 
-                    <json:object-to-json-transformer doc:name="transform BatchJobInstance to JSON"/>
-                     <smtp:outbound-endpoint host="${smtp.host}" responseTimeout="10000" doc:name="send result of the batch in mail" connector-ref="Gmail" from="${mail.from}" password="${smtp.password}" port="${smtp.port}" subject="${mail.subject}" to="${mail.to}" user="${smtp.user}"/> 
-                 </processor-chain> 
+            <scatter-gather doc:name="All">
                 <processor-chain>
                     <json:object-to-json-transformer doc:name="transform BatchJobInstance to JSON"/>
-                    <logger level="INFO" doc:name="log migration process has finished" message="Migration process has finished: #[payload]"/>
+                    <logger message="Migration process has finished: #[payload]" level="INFO" doc:name="log 'Migration process has finished'"/>
+                </processor-chain>
+                <processor-chain>
+                    <parse-template location="./src/main/resources/email/body.html" doc:name="Parse Template"/>
+                    <smtp:outbound-endpoint host="${smtp.host}" port="${smtp.port}" user="${smtp.user}" password="${smtp.password}" connector-ref="Gmail" to="${mail.to}" from="${mail.from}" subject="${mail.subject}" responseTimeout="10000" doc:name="send mail"/>
                 </processor-chain>
             </scatter-gather>
             
         </batch:on-complete>
     </batch:job>
-    <flow name="mainFlow" doc:name="mainFlow" doc:description="This flow is the entry point to the Kick business logic.
+    <flow name="mainFlow"  doc:description="This flow is the entry point to the Kick business logic.
 
 This flow should control the direction of the application, and it should be called by the different endpoints that your Template exposes to trigger it.
 
 ">
-        <batch:execute name="syncContactBatch" doc:name="Batch Execute"/>
-
+        <batch:execute name="syncContactsBatch" doc:name="execute syncContactsBatch"/>
         <exception-strategy ref="defaultChoiceExceptionStrategy" doc:name="Reference Exception Strategy"/>
     </flow>
 </mule>

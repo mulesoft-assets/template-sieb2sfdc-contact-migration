@@ -21,6 +21,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.mule.MessageExchangePattern;
 import org.mule.api.MuleEvent;
@@ -29,6 +30,7 @@ import org.mule.api.lifecycle.InitialisationException;
 import org.mule.modules.siebel.api.model.response.CreateResult;
 import org.mule.processor.chain.SubflowInterceptingChainLifecycleWrapper;
 import org.mule.streaming.ConsumerIterator;
+import org.mule.tck.junit4.rule.DynamicPort;
 
 import com.mulesoft.module.batch.BatchTestHelper;
 
@@ -38,9 +40,6 @@ import com.mulesoft.module.batch.BatchTestHelper;
  * 
  */
 public class BusinessLogicIT extends AbstractTemplateTestCase {
-	
-	private static final Logger log = LogManager.getLogger(BusinessLogicIT.class);
-	
 	private static final String KEY_ID = "Id";
 	private static final String KEY_FIRST_NAME = "First Name";	
 	private static final String KEY_LAST_NAME = "Last Name";
@@ -49,6 +48,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	
 	private static final String INBOUND_FLOW_NAME = "mainFlow";
 	private static final int TIMEOUT_MILLIS = 120;
+	private static final Logger LOGGER = LogManager.getLogger(BusinessLogicIT.class);
 
 	List<Map<String, Object>> contactsInSiebel = new ArrayList<Map<String,Object>>();
 	List<Map<String, Object>> contactsInSalesforce = new ArrayList<Map<String,Object>>();
@@ -63,20 +63,20 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	private SubflowInterceptingChainLifecycleWrapper queryContactFromSalesforce;
 	
 	private BatchTestHelper batchTestHelper;
+	
+	@Rule
+	public DynamicPort port = new DynamicPort("http.port");
 
 	@BeforeClass
 	public static void beforeTestClass() {
 		DateFormat formatter = new SimpleDateFormat("M/d/y H:m:s");
-		Calendar calendar = Calendar.getInstance();
-		formatter.setCalendar(calendar);
 		formatter.setTimeZone(TimeZone.getTimeZone("US/Pacific"));
-		String siebelTime = formatter.format(calendar.getTime());
-		System.setProperty("migration.startDate", siebelTime);
-		log.info("migration date: " + System.getProperty("migration.startDate"));
+		System.setProperty("migration.startDate", formatter.format(Calendar.getInstance().getTime()));
+		LOGGER.info("migration date: " + System.getProperty("migration.startDate"));
 	}
 
 	@Before
-	public void setUp() throws MuleException {
+	public void setUp() throws Exception {
 		getAndInitializeFlows();
 		
 		batchTestHelper = new BatchTestHelper(muleContext);
@@ -84,7 +84,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	}
 
 	@After
-	public void tearDown() throws MuleException, Exception {
+	public void tearDown() throws Exception {
 		deleteTestContactsFromSiebel();
 		deleteTestContactsFromSalesforce();
 	}
@@ -133,32 +133,29 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 		}
 	}
 
-	private void createTestDataInSandBox() {
-		try {
-			String uniqueSuffix = "" + System.currentTimeMillis();
-			
-			Map<String, Object> contactInSiebel = new HashMap<String, Object>();
-			String name = "ContactMigration"+ uniqueSuffix;
+	private void createTestDataInSandBox() throws Exception {
+			String name = "ContactMigration" + System.currentTimeMillis();
 			String email = name + "@gmail.com";
-			String accountName = name;
 			
+			//create siebel account
+			Map<String, Object> accountInSiebel = new HashMap<String, Object>();
+			accountInSiebel.put("Name", name);
+			MuleEvent eventAccount = createAccountInSiebel.process(getTestEvent(accountInSiebel, MessageExchangePattern.REQUEST_RESPONSE));
+			accountInSiebel.put(KEY_ID, ((CreateResult) eventAccount.getMessage().getPayload()).getCreatedObjects().get(0));
+			
+			// create siebel contact
+			Map<String, Object> contactInSiebel = new HashMap<String, Object>();
 			contactInSiebel.put(KEY_FIRST_NAME, name);
 			contactInSiebel.put(KEY_LAST_NAME, name);
 			contactInSiebel.put(KEY_EMAIL, email);
-			contactInSiebel.put(KEY_ACCOUNT, accountName);
+			contactInSiebel.put(KEY_ACCOUNT, name);
 			contactsInSiebel.add(contactInSiebel);
+
 			
-			MuleEvent event = createAccountInSiebel.process(getTestEvent(accountName, MessageExchangePattern.REQUEST_RESPONSE));
-			
-			event = createContactInSiebel.process(getTestEvent(contactInSiebel, MessageExchangePattern.REQUEST_RESPONSE));
-			CreateResult cr = (CreateResult) event.getMessage().getPayload();
+			MuleEvent eventContact = createContactInSiebel.process(getTestEvent(contactInSiebel, MessageExchangePattern.REQUEST_RESPONSE));
+			CreateResult cr = (CreateResult) eventContact.getMessage().getPayload();
 			contactInSiebel.put(KEY_ID, cr.getCreatedObjects().get(0));
-			// accountName is deleted from the contactInSiebel after inserting object to the Siebel
-			contactInSiebel.put(KEY_ACCOUNT, accountName);
-			logger.info("created siebel contact: " + contactInSiebel);
-		} catch(Exception e){
-			e.printStackTrace();
-		}
+			LOGGER.info("created siebel contact: " + contactInSiebel);
 	}
 
 	private void deleteTestContactsFromSiebel() throws InitialisationException, MuleException, Exception {
