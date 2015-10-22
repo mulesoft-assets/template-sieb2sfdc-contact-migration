@@ -211,7 +211,7 @@ This flow has Exception Strategy that basically consists on invoking the *defaul
 
 
 ## endpoints.xml<a name="endpointsxml"/>
-This is the file where you will fiund the inbound and outbound sides of your integration app.
+This is the file where you will find the inbound and outbound sides of your integration app.
 This Anypoint Template has only an [HTTP Listener Connector](http://www.mulesoft.org/documentation/display/current/HTTP+Connector) as the way to trigger the use case.
 
 **HTTP Listener Connector** - Start Report Generation
