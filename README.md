@@ -32,11 +32,9 @@ This Template should serve as a foundation for the process of migrating contacts
 
 As implemented, this Template leverages the [Batch Module](http://www.mulesoft.org/documentation/display/current/Batch+Processing).
 The batch job is divided in Input, Process and On Complete stages.
-During the Input stage the Template will go to Siebel and query all the existing Contacts that match the filter criteria.
-During the Process stage, each Siebel Contact will be filtered depending on, if it has an existing matching Contact in the Salesforce and if the last updated date of the later is greater than the one of Siebel.
-Account associated with Siebel Contact is migrated to Account associated with Contact in Salesforce. The matching is performed by querying a Salesforce instance for an entry with name same as the given Siebel Account name.
-The last step of the Process stage will group the contacts and create or update them in Salesforce.
-Finally during the On Complete stage the Template will both output statistics data into the console and send a notification email with the results of the batch execution.
+During the Input stage the Template query Siebel for all the existing Contacts that match the filtering criteria.
+In Process stage, the template will group the contacts and create them in Salesforce.
+Finally during the On Complete stage the Template will  output statistics data into the console and send a notification email with the results of the batch execution to configured list of email addresses.
 
 # Considerations <a name="considerations"/>
 
@@ -96,7 +94,7 @@ In any of the ways you would like to run this Anypoint Template, here is an exam
 <h1>Batch Process initiated</h1>
 <b>ID:</b>6eea3cc6-7c96-11e3-9a65-55f9f3ae584e<br/>
 <b>Records to Be Processed: </b>9<br/>
-<b>Start execution on: </b>Mon Jan 13 18:05:33 GMT-03:00 2014
+<b>Start execution on: </b>Thu Oct 22 12:05:33 GMT-03:00 2015
 </pre>
 
 ## Running on premise <a name="runonopremise"/>
@@ -148,7 +146,6 @@ In order to use this Mule Anypoint Template you need to configure properties (Cr
 ### Application configuration
 + http.port `9090` 
 + migration.startDate `9/25/14 23:0:0`
-+ page.size `100`
 
 #### Oracle Siebel Business Objects Connector configuration
 + sieb.user `SADMIN`
@@ -158,13 +155,13 @@ In order to use this Mule Anypoint Template you need to configure properties (Cr
 + sieb.objectManager `EAIObjMgr_enu`
 + sieb.port `2321`
 
-#### SalesForce Connector configuration
+#### Salesforce Connector configuration
 + sfdc.username `joan.baez@org`
 + sfdc.password `JoanBaez456`
 + sfdc.securityToken `ces56arl7apQs56XTddf34X`
 + sfdc.url `https://login.salesforce.com/services/Soap/u/32.0`
 
-#### SMPT Services configuration
+#### SMTP Services configuration
 + smtp.host `smtp.gmail.com`
 + smtp.port `587`
 + smtp.user `exampleuser@gmail.com`
@@ -208,21 +205,19 @@ In the visual editor they can be found on the *Global Element* tab.
 
 ## businessLogic.xml<a name="businesslogicxml"/>
 Functional aspect of the Anypoint Template is implemented on this XML, directed by one flow responsible of excecuting the logic.
-For the pourpose of this particular Anypoint Template the *mainFlow* just excecutes the Batch Job which handles all the logic of it.
+For the purpose of this particular Anypoint Template the *mainFlow* just excecutes the Batch Job which handles all the logic.
 This flow has Exception Strategy that basically consists on invoking the *defaultChoiseExceptionStrategy* defined in *errorHandling.xml* file.
 
 
 
 ## endpoints.xml<a name="endpointsxml"/>
-This is the file where you will found the inbound and outbound sides of your integration app.
-This Template has only an [HTTP Listener Connector](http://www.mulesoft.org/documentation/display/current/HTTP+Listener+Connector) as the way to trigger the use case.
+This is the file where you will find the inbound and outbound sides of your integration app.
+This Anypoint Template has only an [HTTP Listener Connector](http://www.mulesoft.org/documentation/display/current/HTTP+Connector) as the way to trigger the use case.
 
 **HTTP Listener Connector** - Start Report Generation
-
 + `${http.port}` is set as a property to be defined either on a property file or in CloudHub environment variables.
 + The path configured by default is `migratecontacts` and you are free to change for the one you prefer.
 + The host name for all endpoints in your CloudHub configuration should be defined as `localhost`. CloudHub will then route requests from your application domain URL to the endpoint.
-+ The endpoint is a *request-response* since as a result of calling it the response will be the total of Accounts synced and filtered by the criteria specified.
 
 
 
