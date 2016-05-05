@@ -46,30 +46,18 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
                     <sfdc:query-single config-ref="Salesforce" query="SELECT Id FROM Contact WHERE Email = '#[payload[&quot;Email Address&quot;]]'" doc:name="Query Salesforce for Contact"/>
                 </enricher>
             </batch:step>
-            <batch:step name="findOrCreateAccountInSalesforceStep" accept-expression="payload.Account != ''">
+            <batch:step name="findAccountInSalesforceStep" accept-expression="payload.Account != ''">
                 
-                <enricher doc:name="Store Account in accountInTargetInstance" source="#[payload == null ? null : payload.Id]" target="#[payload.AccountId]">
+                <enricher doc:name="store result in 'payload.AccountId'" source="#[payload == null ? null : payload.Id]" target="#[payload.AccountId]">
                     <sfdc:query-single config-ref="Salesforce" query="SELECT Id,Name from Account where Name = '#[payload.Account]'" doc:name="Query Salesforce for Account"/>
 
                 </enricher>
-                <choice doc:name="Does account need to be created?">
-                    <when expression="#[payload.AccountId == null]">
-                        <enricher source="#[payload[0].getId()]" target="#[payload.AccountId]" doc:name="Enrich payload with new Account Id">
-                            <sfdc:create config-ref="Salesforce" type="Account" doc:name="Create account in Salesforce">
-                                <sfdc:objects>
-                                    <sfdc:object>
-                                        <sfdc:inner-object key="Name">#[payload.Account]</sfdc:inner-object>
-                                    </sfdc:object>
-                                </sfdc:objects>
-                            </sfdc:create>
 
-                        </enricher>
-                    </when>
-                    <otherwise>
-                        <logger message="Account already exists. Nothing to create." level="INFO" doc:name="Log that the account exists"/>
-
-                    </otherwise>
-                </choice>
+            </batch:step>
+            <batch:step name="createAccountInSfdcIfNecessaryStep" accept-expression="payload != null &amp;&amp;  payload.Account != '' &amp;&amp; payload.AccountId == null">
+                <batch:commit size="200" doc:name="Batch Commit">
+                	<flow-ref name="createAccountsFlow" doc:name="Call createAccountsFlow"/>
+                </batch:commit>
             </batch:step>
             
             <batch:step name="upsertContactInSalesforceStep" accept-policy="ALL">
@@ -101,16 +89,8 @@ payload map {
 
         </batch:process-records>
         <batch:on-complete>
-            <scatter-gather doc:name="All">
-                <processor-chain>
-                    <json:object-to-json-transformer doc:name="transform BatchJobInstance to JSON"/>
-                    <logger message="Migration process has finished: #[payload]" level="INFO" doc:name="log 'Migration process has finished'"/>
-                </processor-chain>
-                <processor-chain>
-                    <parse-template location="email/body.html" doc:name="Parse Template"/>
-                    <smtp:outbound-endpoint host="${smtp.host}" port="${smtp.port}" user="${smtp.user}" password="${smtp.password}" connector-ref="Gmail" to="${mail.to}" from="${mail.from}" subject="${mail.subject}" responseTimeout="10000" doc:name="send mail"/>
-                </processor-chain>
-            </scatter-gather>
+            <flow-ref name="sendEmailLogResultFlow" doc:name="Call sendEmailLogResultFlow"/>
+
             
         </batch:on-complete>
     </batch:job>
@@ -122,4 +102,40 @@ This flow should control the direction of the application, and it should be call
         <batch:execute name="syncContactsBatch" doc:name="execute syncContactsBatch"/>
         <exception-strategy ref="defaultChoiceExceptionStrategy" doc:name="Reference Exception Strategy"/>
     </flow>
+    <sub-flow name="createAccountsFlow" >
+                <dw:transform-message doc:name="Transform payload to list of Account maps">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload map
+{
+	Name: $.Account
+}]]></dw:set-payload>
+                </dw:transform-message>
+        <sfdc:create config-ref="Salesforce" type="Account" doc:name="create Account in Salesforce Instance">
+            <sfdc:objects ref="#[payload]"/>
+        </sfdc:create>
+        <foreach doc:name="For Each">
+            <choice doc:name="Choice">
+                <when expression="#[payload.success]">
+                    <expression-component doc:name="Set the AccountId"><![CDATA[records[counter-1].payload['AccountId'] = payload.id]]></expression-component>
+                </when>
+                <otherwise>
+                    <logger message="could not create account for record " doc:name="Log 'could not create account for record'"/>
+                </otherwise>
+            </choice>
+        </foreach>
+    </sub-flow>
+    <sub-flow name="sendEmailLogResultFlow" >
+        <scatter-gather doc:name="All">
+            <processor-chain>
+                <json:object-to-json-transformer doc:name="Transform BatchJobInstance to JSON"/>
+                <logger message="Migration process has finished: #[payload]" level="INFO" doc:name="Log 'Migration process has finished'"/>
+            </processor-chain>
+            <processor-chain>
+                <json:object-to-json-transformer doc:name="Transform BatchJobInstance to JSON"/>
+                <smtp:outbound-endpoint host="${smtp.host}" port="${smtp.port}" user="${smtp.user}" password="${smtp.password}" connector-ref="Gmail" to="${mail.to}" from="${mail.from}" subject="${mail.subject}" responseTimeout="10000" doc:name="Send mail"/>
+            </processor-chain>
+        </scatter-gather>
+    </sub-flow>
 </mule>
