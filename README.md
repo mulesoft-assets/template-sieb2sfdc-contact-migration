@@ -195,7 +195,7 @@ This file provides the configuration for connectors and configuration properties
 <!-- Default Business Logic XML (start) -->
 Functional aspect of the Anypoint Template is implemented on this XML, directed by one flow responsible of excecuting the logic.
 For the purpose of this particular Anypoint Template the *mainFlow* just excecutes the Batch Job which handles all the logic.
-This flow has Exception Strategy that basically consists on invoking the *defaultChoiseExceptionStrategy* defined in *errorHandling.xml* file.<!-- Default Business Logic XML (end) -->
+<!-- Default Business Logic XML (end) -->
 
 <!-- Business Logic XML (start) -->
 
